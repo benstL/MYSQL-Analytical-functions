@@ -42,29 +42,30 @@ ORDER BY
     
 -- 4.(OPTIONAL) update the previous query from above to retrieve only the top 5 films within each category
 
+WITH ranked_films AS (
     SELECT
+        f.film_id,
+        f.title,
+        c.name AS category,
+        f.rental_rate,
+        ROW_NUMBER() OVER (PARTITION BY c.category_id ORDER BY f.rental_rate DESC) AS ranking_within_category,
+        COUNT(*) OVER (PARTITION BY c.category_id) AS total_films_in_category
+    FROM
+        film f
+    JOIN
+        film_category fc ON f.film_id = fc.film_id
+    JOIN
+        category c ON fc.category_id = c.category_id
+)
+SELECT
     film_id,
     title,
     category,
-    rental_rate,
-    ranking_within_category
+    rental_rate
 FROM
-    (
-		SELECT
-            f.film_id,
-            f.title,
-            c.name AS category,
-            f.rental_rate,
-            RANK() OVER (PARTITION BY c.category_id ORDER BY f.rental_rate) AS ranking_within_category
-        FROM
-            film f
-        JOIN
-            film_category fc ON f.film_id = fc.film_id
-        JOIN
-            category c ON fc.category_id = c.category_id
-    ) ranked_films
+    ranked_films
 WHERE
-    ranking_within_category <= 5
+    ranking_within_category <= 5 AND ranking_within_category <= total_films_in_category
 ORDER BY
-    category, ranking_within_category;
-
+    category,
+    ranking_within_category;
